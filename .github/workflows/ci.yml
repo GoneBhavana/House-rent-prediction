@@ -9,7 +9,32 @@ on:
       - main
 
 jobs:
+  sonarqube:
+    name: SonarQube analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run SonarQube analysis
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: >-
+            -Dsonar.projectKey=House-rent-prediction
+            -Dsonar.projectName=House-rent-prediction
+            -Dsonar.organization=bhavana
+            -Dsonar.sources=.
+            -Dsonar.exclusions=.git/**,.github/**,static/images/**,model.pkl,test-results/**
+            -Dsonar.qualitygate.wait=true
+
   test:
+    needs: sonarqube
     runs-on: ubuntu-latest
 
     steps:
