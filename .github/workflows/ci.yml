@@ -38,7 +38,7 @@ jobs:
           args: >-
             -Dsonar.projectKey=House-rent-prediction
             -Dsonar.projectName=House-rent-prediction
-            -Dsonar.organization=bhavana
+            -Dsonar.organization=bhav
             -Dsonar.sources=.
             -Dsonar.exclusions=.git/**,.github/**,static/images/**,model.pkl,test-results/**
             -Dsonar.qualitygate.wait=true
