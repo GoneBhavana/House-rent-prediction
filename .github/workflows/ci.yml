@@ -47,6 +47,7 @@ jobs:
             -Dsonar.projectName=House-rent-prediction
             -Dsonar.organization=bhav
             -Dsonar.sources=.
+            -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.exclusions=.git/**,.github/**,static/images/**,model.pkl,test-results/**
             -Dsonar.qualitygate.wait=true
 
