@@ -46,9 +46,10 @@ jobs:
             -Dsonar.projectKey=GoneBhavana_House-rent-prediction
             -Dsonar.projectName=House-rent-prediction
             -Dsonar.organization=bhav
-            -Dsonar.sources=.
+            -Dsonar.sources=app.py,house.py
+            -Dsonar.tests=test_app_50_cases.py
             -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.exclusions=.git/**,.github/**,static/images/**,model.pkl,test-results/**
+            -Dsonar.exclusions=.git/**,.github/**,static/images/**,model.pkl,test-results/**,Dockerfile,azure-pipelines.yml
             -Dsonar.qualitygate.wait=true
 
   test:
