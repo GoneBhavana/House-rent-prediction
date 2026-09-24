@@ -109,9 +109,6 @@ jobs:
           name: flask-log
           path: flask.log
           if-no-files-found: ignore
-<<<<<<< HEAD
-=======
-
   docker-security:
     name: Docker build and Trivy scan
     needs: test
@@ -148,4 +145,3 @@ jobs:
           done
           docker logs house-rent-prediction-test
           exit 1
->>>>>>> 17ce9e6 (Add Docker and Trivy GitHub Actions job)
