@@ -36,7 +36,7 @@ jobs:
           SONAR_HOST_URL: https://sonarcloud.io
         with:
           args: >-
-            -Dsonar.projectKey=House-rent-prediction
+            -Dsonar.projectKey=GoneBhavana_House-rent-prediction
             -Dsonar.projectName=House-rent-prediction
             -Dsonar.organization=bhav
             -Dsonar.sources=.
