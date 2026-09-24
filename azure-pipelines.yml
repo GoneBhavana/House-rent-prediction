@@ -6,89 +6,147 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-steps:
+variables:
+  sonarQubeServiceConnection: 'SonarQube'
+  sonarProjectKey: 'house-rent-prediction'
+  sonarProjectName: 'House Rent Prediction'
+  dockerImageName: 'house-rent-prediction'
 
-# 1. Checkout source code
-- checkout: self
-  displayName: 'Checkout Source Code'
+stages:
+- stage: QualityAndTests
+  displayName: 'Quality and Tests'
+  jobs:
+  - job: QualityAndTestsJob
+    displayName: 'Run Tests and SonarQube'
+    steps:
+    - checkout: self
+      displayName: 'Checkout Source Code'
 
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.8'
+        addToPath: true
+      displayName: 'Setup Python 3.8'
 
-# 2. Install Python
-- task: UsePythonVersion@0
-  inputs:
-    versionSpec: '3.8'
-    addToPath: true
-  displayName: 'Setup Python 3.8'
+    - script: |
+        python -m pip install --upgrade pip
+      displayName: 'Upgrade pip'
 
+    - script: |
+        pip install -r requirement.txt
+      displayName: 'Install Dependencies'
 
-# 3. Upgrade pip
-- script: |
-    python -m pip install --upgrade pip
-  displayName: 'Upgrade pip'
+    - script: |
+        pip install pytest
+        pip install pytest-html
+        pip install pytest-cov
+      displayName: 'Install Unit Test Dependencies'
 
+    - task: SonarQubePrepare@7
+      inputs:
+        SonarQube: '$(sonarQubeServiceConnection)'
+        scannerMode: 'cli'
+        configMode: 'manual'
+        cliProjectKey: '$(sonarProjectKey)'
+        cliProjectName: '$(sonarProjectName)'
+        cliSources: '.'
+        extraProperties: |
+          sonar.python.version=3.8
+          sonar.python.coverage.reportPaths=coverage.xml
+          sonar.python.xunit.reportPath=test-results/junit.xml
+          sonar.exclusions=**/.pytest_cache/**,**/static/images/**,model.pkl
+      displayName: 'Prepare SonarQube Analysis'
 
-# 4. Install project dependencies
-- script: |
-    pip install -r requirement.txt
-  displayName: 'Install Dependencies'
+    - script: |
+        python -m py_compile app.py
+        python -m py_compile house.py
+      displayName: 'Validate Python Code'
 
+    - script: |
+        mkdir -p test-results
+      displayName: 'Create Test Result Folder'
 
-# 5. Install unit test dependencies
-- script: |
-    pip install pytest
-    pip install pytest-html
-  displayName: 'Install Unit Test Dependencies'
+    - script: |
+        pytest test_app_50_cases.py \
+          -v \
+          -ra \
+          --junitxml=test-results/junit.xml \
+          --html=test-results/unit-test-report.html \
+          --cov=. \
+          --cov-report=xml:coverage.xml \
+          --self-contained-html
+      displayName: 'Run 50 Unit Tests'
+      continueOnError: true
 
+    - task: PublishTestResults@2
+      condition: always()
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: 'test-results/junit.xml'
+        testRunTitle: 'House Price Prediction Unit Tests'
+        failTaskOnFailedTests: false
+      displayName: 'Publish Unit Test Results'
 
-# 6. Check Python files
-- script: |
-    python -m py_compile app.py
-    python -m py_compile house.py
-  displayName: 'Validate Python Code'
+    - task: PublishPipelineArtifact@1
+      condition: always()
+      inputs:
+        targetPath: 'test-results'
+        artifact: 'unit-test-report'
+        publishLocation: 'pipeline'
+      displayName: 'Publish Unit Test Report'
 
+    - task: SonarQubeAnalyze@7
+      displayName: 'Run SonarQube Analysis'
 
-# 7. Create test result folder
-- script: |
-    mkdir -p test-results
-  displayName: 'Create Test Result Folder'
+    - task: SonarQubePublish@7
+      inputs:
+        pollingTimeoutSec: '300'
+      displayName: 'Publish SonarQube Quality Gate'
 
+- stage: DockerSecurity
+  displayName: 'Docker Build and Trivy Scan'
+  dependsOn: QualityAndTests
+  condition: succeeded()
+  jobs:
+  - job: DockerSecurityJob
+    displayName: 'Build, Scan, and Test Container'
+    steps:
+    - checkout: self
+      displayName: 'Checkout Source Code'
 
-# 8. Run 50 unit tests
-- script: |
-    pytest tests/test_app_50_cases.py \
-      -v \
-      -ra \
-      --junitxml=test-results/junit.xml \
-      --html=test-results/unit-test-report.html \
-      --self-contained-html
-  displayName: 'Run 50 Unit Tests'
-  continueOnError: true
+    - task: Docker@2
+      inputs:
+        command: 'build'
+        repository: '$(dockerImageName)'
+        Dockerfile: 'Dockerfile'
+        tags: |
+          $(Build.BuildId)
+          latest
+      displayName: 'Build Docker Image'
 
+    - script: |
+        docker run --rm \
+          -v /var/run/docker.sock:/var/run/docker.sock \
+          -v $(Pipeline.Workspace)/.trivycache:/root/.cache/ \
+          aquasec/trivy:0.66.0 image \
+          --exit-code 1 \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          $(dockerImageName):$(Build.BuildId)
+      displayName: 'Scan Docker Image with Trivy'
 
-# 9. Publish unit test results
-- task: PublishTestResults@2
-  condition: always()
-  inputs:
-    testResultsFormat: 'JUnit'
-    testResultsFiles: 'test-results/junit.xml'
-    testRunTitle: 'House Price Prediction Unit Tests'
-    failTaskOnFailedTests: false
-  displayName: 'Publish Unit Test Results'
-
-
-# 10. Publish HTML test report
-- task: PublishPipelineArtifact@1
-  condition: always()
-  inputs:
-    targetPath: 'test-results'
-    artifact: 'unit-test-report'
-    publishLocation: 'pipeline'
-  displayName: 'Publish Unit Test Report'
-
-
-# 11. Start Flask application
-- script: |
-    python app.py &
-    sleep 10
-    echo "Flask application started successfully"
-  displayName: 'Start Flask Application'
+    - script: |
+        docker run --detach --name house-rent-prediction-test \
+          --publish 5000:5000 \
+          $(dockerImageName):$(Build.BuildId)
+        trap 'docker rm --force house-rent-prediction-test' EXIT
+        for attempt in {1..15}; do
+          if curl --fail --silent http://127.0.0.1:5000/ > /dev/null; then
+            echo "Docker container started successfully"
+            exit 0
+          fi
+          sleep 2
+        done
+        docker logs house-rent-prediction-test
+        exit 1
+      displayName: 'Smoke Test Docker Image'

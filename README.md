@@ -13,6 +13,18 @@ pip install -r requirement.txt
 <br>
 <br>
 
+## SonarQube in Azure DevOps
+
+The Azure Pipeline includes Python test coverage and SonarQube analysis. To enable it:
+
+1. Create a SonarQube project with the key `house-rent-prediction`.
+2. In Azure DevOps, create a SonarQube service connection named `SonarQube` under **Project settings > Service connections**.
+3. Run the pipeline. It prepares the scan, runs the tests, uploads `coverage.xml` and `test-results/junit.xml`, and publishes the SonarQube quality gate.
+
+The service connection name, project key, and project name are defined at the top of `azure-pipelines.yml`. Change those variables if your SonarQube project uses different values. The SonarQube extension for Azure DevOps must be installed in the organization before the pipeline can use the `SonarQubePrepare`, `SonarQubeAnalyze`, and `SonarQubePublish` tasks.
+
+For a self-hosted SonarQube server, make sure the Azure DevOps agent can reach the server URL. For SonarCloud, use the SonarCloud Azure DevOps tasks and service connection instead of the SonarQube tasks.
+
 ## Getting Started
 
 After installing the required packages, you can start the application by executing the following command in your terminal:<br><br>

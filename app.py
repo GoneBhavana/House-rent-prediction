@@ -1,8 +1,13 @@
-from flask import Flask, render_template, request
-import numpy as np
+import os
 import pickle
 
+from flask import Flask, render_template, request
+from flask_wtf import CSRFProtect
+import numpy as np
+
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or os.urandom(32)
+csrf = CSRFProtect(app)
 model = pickle.load(open('model.pkl', 'rb'))
 
 
@@ -25,4 +30,4 @@ def predict():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)

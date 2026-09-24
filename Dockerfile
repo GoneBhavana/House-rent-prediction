@@ -6,8 +6,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 COPY requirement.txt ./
-RUN python -m pip install --no-cache-dir -r requirement.txt \
-    && python -m pip install --no-cache-dir --upgrade setuptools wheel
+RUN python -m pip install --no-cache-dir --only-binary=:all: -r requirement.txt
+RUN python -m pip uninstall --yes setuptools wheel
 
 COPY app.py house.py house_data.csv ./
 COPY templates ./templates
