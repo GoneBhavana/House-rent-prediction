@@ -1,10 +1,11 @@
 import pandas as pd
+from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 import pickle
 
-df = pd.read_csv(
-    r'_YOUR_LOCATION_\house_data.csv')
+data_path = Path(__file__).with_name('house_data.csv')
+df = pd.read_csv(data_path)
 
 columns = ['bedrooms', 'bathrooms', 'floors', 'yr_built', 'price']
 df = df[columns]

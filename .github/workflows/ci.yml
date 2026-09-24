@@ -109,3 +109,43 @@ jobs:
           name: flask-log
           path: flask.log
           if-no-files-found: ignore
+<<<<<<< HEAD
+=======
+
+  docker-security:
+    name: Docker build and Trivy scan
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build --tag house-rent-prediction:${{ github.sha }} .
+
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: house-rent-prediction:${{ github.sha }}
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+
+      - name: Smoke test Docker image
+        run: |
+          docker run --detach --name house-rent-prediction-test \
+            --publish 5000:5000 \
+            house-rent-prediction:${{ github.sha }}
+          trap 'docker rm --force house-rent-prediction-test' EXIT
+          for attempt in {1..15}; do
+            if curl --fail --silent http://127.0.0.1:5000/ > /dev/null; then
+              echo "Docker container started successfully"
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs house-rent-prediction-test
+          exit 1
+>>>>>>> 17ce9e6 (Add Docker and Trivy GitHub Actions job)
